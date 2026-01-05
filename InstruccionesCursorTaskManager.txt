@@ -1,0 +1,345 @@
+🏗️ Visión general de la solución
+
+Vamos a construir un MVP limpio, simple y coherente:
+
+✔ Frontend (Next.js) → UI + manejo de sesión
+✔ Backend (FastAPI) → API REST + lógica de negocio
+✔ Supabase → Base de datos + autenticación + RLS
+
+El usuario:
+
+Se registra o inicia sesión
+
+Accede a su dashboard
+
+Gestiona sus tareas
+
+Ve su plan diario
+
+Cada usuario solo ve sus datos.
+
+📌 Objetivo funcional
+
+Un comercial debe poder:
+
+📝 Gestionar tareas
+
+Crear
+
+Ver
+
+Editar
+
+Eliminar
+
+Con:
+
+título
+
+estado
+
+prioridad
+
+(opcional) hora o bloque asignado al día
+
+🕒 Organizar su tiempo
+
+Ejemplo simple que usaremos:
+
+➡️ agenda del día con bloques horarios (mañana / tarde / hora concreta)
+
+🏠 Dashboard principal
+
+Debe responder:
+
+👉 ¿Qué tengo que hacer hoy?
+👉 ¿Qué debería estar haciendo ahora?
+
+🧩 Arquitectura lógica
+User  
+  ↓ (login/signup)
+Supabase Auth  
+  ↓ (JWT)
+Next.js ───────→ FastAPI ───────→ Supabase DB
+       (API calls)           (queries seguras)
+
+Importante
+
+El frontend NO consulta Supabase directamente para datos.
+Siempre pasa por FastAPI.
+
+🗄️ Modelo de datos (BD en Supabase)
+
+Vamos a definir dos tablas principales.
+
+1️⃣ Tabla tasks
+
+Representa tareas del usuario.
+
+campo	tipo	detalle
+id	uuid	pk
+user_id	uuid	FK a auth.users
+title	text	requerido
+status	text enum	pending / in_progress / done
+priority	int	menor = más prioridad
+scheduled_for	date	día planificado (opcional)
+scheduled_time	time	hora concreta (opcional)
+created_at	timestamp	auto
+updated_at	timestamp	auto
+Reglas RLS
+
+Solo puede ver sus tareas
+
+Solo puede modificar sus tareas
+
+2️⃣ Tabla time_blocks (opcional pero útil)
+
+Si quieres manejar bloques:
+
+campo	tipo	detalle
+id	uuid	
+user_id	uuid	
+task_id	uuid	
+start_time	timestamp	
+end_time	timestamp	
+
+👉 Esto permite saber en qué momento del día toca cada cosa.
+
+🔐 Autenticación
+
+Usamos Supabase Auth (email/password está bien).
+
+Flujo:
+
+Usuario inicia sesión en frontend
+
+Supabase devuelve JWT
+
+El frontend envía ese token al backend en cada request
+
+FastAPI valida el token
+
+Recupera user_id
+
+Ejecuta operaciones filtrando por usuario
+
+🌐 API REST — Diseño
+
+Diseño simple, consistente y orientado a recursos.
+
+🔑 Auth
+
+Aunque auth lo maneja Supabase, en backend tendremos:
+
+GET /auth/me
+
+Devuelve datos del usuario autenticado.
+
+📋 Tasks
+GET /tasks
+
+Devuelve todas las tareas del usuario.
+
+Filtros opcionales:
+
+status
+
+date
+
+POST /tasks
+
+Crea una tarea.
+
+Campos:
+
+title
+
+status
+
+priority
+
+scheduled_for (opcional)
+
+scheduled_time (opcional)
+
+PUT /tasks/{id}
+
+Actualiza:
+
+estado
+
+prioridad
+
+título
+
+horario
+
+DELETE /tasks/{id}
+
+Elimina la tarea.
+
+🗓 GET /tasks/today
+
+Devuelve:
+
+tareas del día
+
+ordenadas por prioridad / tiempo
+
+ideal para la vista principal
+
+🎨 Diseño funcional del Frontend
+
+Minimalista, directo, usable.
+
+🔐 Pantallas
+1️⃣ Login / Registro
+
+Simple. Sin complicaciones.
+
+2️⃣ Dashboard (vista principal)
+
+Debe mostrar:
+
+✔ Tareas del día
+✔ Cuál toca ahora (si tiene hora asignada)
+✔ Estado de progreso
+
+Ejemplo de secciones:
+
+➡ Ahora deberías estar trabajando en:
+   - Llamar a cliente X
+
+📅 Tareas de hoy:
+   - [ ] Enviar propuesta
+   - [ ] Reunión 10:00
+   - [ ] Seguimiento clientes
+
+3️⃣ Lista de tareas
+
+CRUD completo.
+
+Filtros:
+
+todas
+
+por estado
+
+por prioridad
+
+por día
+
+4️⃣ Planificación diaria
+
+Un calendario sencillo tipo:
+
+09:00 — Reunión cliente
+11:00 — Llamadas
+15:00 — Redacción propuestas
+
+
+No hace falta un calendario complejo.
+
+🧠 Lógica de negocio clave
+🏆 Prioridad
+
+Se usa para ordenar tareas.
+
+Ejemplo:
+
+1 = urgente
+
+5 = baja prioridad
+
+📅 Organización del día
+
+Puedes usar cualquiera de estas opciones:
+
+✔ asignar fecha
+✔ asignar hora
+✔ asignar bloques (mañana / tarde)
+
+Mientras quede claro en la UI.
+
+🎯 Tarea actual
+
+Si la tarea tiene hora asignada → se compara con la hora actual.
+
+Si no → se toma la tarea pendiente con mayor prioridad.
+
+📁 Organización del proyecto
+🐍 Backend
+app/
+ ├── main.py
+ ├── api/
+ │    ├── auth.py
+ │    ├── tasks.py
+ ├── models/
+ ├── schemas/
+ ├── services/
+ └── db.py
+
+⚛️ Frontend
+/app
+  /login
+  /dashboard
+  /tasks
+  /schedule
+  /components
+
+🔧 Variables de entorno (en .env.example)
+
+Backend:
+
+SUPABASE_URL=
+SUPABASE_SERVICE_KEY=
+JWT_SECRET=
+
+
+Frontend:
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_KEY=
+API_BASE_URL=
+
+📘 README — estructura recomendada
+
+Introducción breve
+
+Requisitos previos
+
+Setup Supabase
+
+Configuración variables
+
+Cómo ejecutar backend
+
+Cómo ejecutar frontend
+
+Decisiones técnicas
+
+Limitaciones y mejoras futuras
+
+🚀 Mejoras futuras (por si te preguntan)
+
+etiquetas de tareas
+
+recordatorios
+
+arrastrar y soltar agenda
+
+estadísticas
+
+Kanban
+
+notificaciones
+
+✅ Resultado: MVP sólido y evaluable
+
+Con este diseño demuestras:
+
+✔ arquitectura limpia
+✔ separación de responsabilidades
+✔ seguridad (RLS + JWT)
+✔ claridad funcional
+✔ escalabilidad futura
